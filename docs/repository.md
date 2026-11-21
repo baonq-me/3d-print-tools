@@ -13,6 +13,7 @@ Where things go. The full rule set is in [repo-rules.md](repo-rules.md).
 | `tools/` | maintenance scripts | run on the workstation, not needed to convert a file |
 | `docs/` | knowledge | one topic per file, linked from `README.md` |
 | `changelog/` | change history | one file per day, `YYYY-MM-DD.md` |
+| `samples/` | one sample model and the project made from it | 3DBenchy (CC0); regenerate the `.3mf` when the converter output changes |
 | `stl/` | input models | **local only**, git-ignored |
 | `3mf/` | generated projects | **local only**, git-ignored; rebuild with the converter |
 
@@ -37,5 +38,6 @@ the modules are imported as `src.<module>`.
 
 - `README.md` — overview, quick start, doc index.
 - `CLAUDE.md` — guidance for AI coding agents.
+- `LICENSE` — Apache License 2.0.
 - `requirements.txt` — pinned Python packages (numpy).
 - `.gitignore` — keeps `.venv/`, `stl/`, `3mf/` and archives out of git.

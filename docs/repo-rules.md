@@ -24,6 +24,7 @@ These rules apply to people and AI agents alike. Where things live today:
 | Maintenance scripts | `tools/` | standard library where possible |
 | Knowledge | `docs/<topic>.md` | one topic per file, linked from the README |
 | Change history | `changelog/YYYY-MM-DD.md` | one file per day; create today's file or append to it |
+| Sample model and project | `samples/` | only models whose licence allows redistribution; no machine paths inside the `.3mf` |
 | Input models | `stl/` | local only |
 | Generated projects | `3mf/` | local only; every generated `.3mf` goes here |
 | Throwaway scripts and test output | outside the repository | |
@@ -60,7 +61,7 @@ New top-level folders need a row in this table and in
 |---|---|
 | command-line options or output names | [usage.md](usage.md), the README quick start |
 | a profile or a stock snapshot | [profiles.md](profiles.md) |
-| what goes into the `.3mf` | [project-format.md](project-format.md) |
+| what goes into the `.3mf` | [project-format.md](project-format.md), and regenerate `samples/3DBenchy_claude_ender3.3mf` |
 | folders or these rules | this file and [repository.md](repository.md) |
 | anything | today's `changelog/YYYY-MM-DD.md` |
 

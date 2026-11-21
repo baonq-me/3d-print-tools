@@ -39,6 +39,18 @@ The result lands in `3mf/`, for example `3mf/model_claude_ender3_hf_fast.3mf`.
 Open it in Creality Print, check that the three preset names loaded and that
 the part lies the way you want, then slice.
 
+## Sample
+
+`samples/3DBenchy.stl` and `samples/3DBenchy_claude_ender3.3mf` show an input
+and the project made from it with the default `quality` profile:
+
+```sh
+.venv/bin/python converter/stl_to_3mf.py samples/3DBenchy.stl -o samples/3DBenchy_claude_ender3.3mf
+```
+
+The 3DBenchy model is by Creative Tools / NTI Group and is released under
+CC0 1.0 (public domain).
+
 ## Good to know
 
 - The converter keeps the orientation stored in the STL. It never rotates or
@@ -61,3 +73,8 @@ the part lies the way you want, then slice.
 - [docs/repo-rules.md](docs/repo-rules.md) — rules for changes, git and
   documentation
 - [changelog/](changelog/) — change history, one file per day
+
+## License
+
+Apache License 2.0, see [LICENSE](LICENSE). The sample model in `samples/` is
+CC0 1.0.

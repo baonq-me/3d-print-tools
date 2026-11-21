@@ -14,7 +14,7 @@ valid zip can still open with its settings silently dropped.
 | `3D/Objects/object_<n>.model` | the mesh of part `n`, centred on its own origin |
 | `3D/_rels/3dmodel.model.rels`, `_rels/.rels`, `[Content_Types].xml` | package relationships and content types |
 | `Metadata/project_settings.config` | flat JSON with every printer, process and filament setting |
-| `Metadata/model_settings.config` | object names, source file, one `<plate>` block per plate |
+| `Metadata/model_settings.config` | object names, source file name (no folder path), one `<plate>` block per plate |
 | `Metadata/plate_<n>.json` | bounding boxes of the objects on plate `n`, in plate coordinates |
 | `Metadata/plate_<n>.png`, `plate_<n>_small.png`, `plate_no_light_<n>.png`, `top_<n>.png`, `pick_<n>.png` | thumbnails, 300 x 300 px (small: 96 x 96) |
 | `Metadata/creality.config`, `slice_info.config`, `custom_gcode_per_layer.xml` | slicer version stamps and an empty custom G-code list |
@@ -67,9 +67,22 @@ nozzle or filament preset:
 For PETG, pass `--filament "Generic PETG @Creality Ender-3 V3 SE 0.4 nozzle"`
 and `-o converter/template/stock_settings_petg.json`.
 
-This step needs Creality Print installed (macOS paths) and any project file
-saved by that version. The preset files supply the values; the saved project
-supplies the key set and the value format.
+This step needs Creality Print installed and any project file saved by that
+version. The preset files supply the values; the saved project supplies the
+key set and the value format.
+
+The tool looks for the presets in the standard places and takes the newest
+version it finds:
+
+| OS | Per-user presets | Shipped with the application |
+|---|---|---|
+| macOS | `~/Library/Application Support/Creality/Creality Print/<version>/system/Creality` | `/Applications/Creality Print.app/Contents/Resources/profiles/Creality` |
+| Windows | `%APPDATA%\Creality\Creality Print\<version>\system\Creality` | `%ProgramFiles%\Creality\Creality Print <version>\resources\profiles\Creality` |
+| Linux | `~/.config/Creality/Creality Print/<version>/system/Creality` (also under `~/.var/app/` for Flatpak) | `/usr/share` or `/opt`, `CrealityPrint/resources/profiles/Creality` |
+
+Only the macOS paths have been tested. For any other install, pass
+`--presets-dir DIR` with the folder that holds `machine/`, `process/` and
+`filament/`; it is searched first and can be given more than once.
 
 ## Adding a material
 
