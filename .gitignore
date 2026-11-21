@@ -7,4 +7,5 @@ stl/
 # generated slicer projects (rebuild with converter/stl_to_3mf.py)
 3mf/
 *.3mf
+!samples/*.3mf
 *.zip
