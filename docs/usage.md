@@ -12,7 +12,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Python 3.9 or newer. The only dependency is numpy.
+Python 3.12 or newer (required by the pinned numpy). The only dependency is numpy.
 
 ## Commands
 

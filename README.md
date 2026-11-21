@@ -20,7 +20,7 @@ settings already filled in.
 - **Batch**: several STL files or a folder give one project with one plate per
   file (up to 36)
 - **Checks**: warns about meshes that are not watertight or do not fit the bed
-- **Needs**: Python 3.9+ and numpy; the slicer is not needed to convert
+- **Needs**: Python 3.12+ and numpy; the slicer is not needed to convert
 
 ## Quick start
 
