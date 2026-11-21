@@ -115,7 +115,7 @@ def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None
     <part id="{mesh_id}" subtype="normal_part">
       <metadata key="name" value={quoteattr(name)}/>
       <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
-      <metadata key="source_file" value={quoteattr(os.path.abspath(stl_path))}/>
+      <metadata key="source_file" value={quoteattr(name)}/>
       <metadata key="source_object_id" value="0"/>
       <metadata key="source_volume_id" value="0"/>
       <metadata key="source_offset_x" value="{float(centre[0])!r}"/>
