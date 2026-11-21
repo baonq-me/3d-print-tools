@@ -6,16 +6,59 @@ for the stock printer / process / filament presets. stl_to_3mf.py layers the
 profile deltas (converter/profiles/*.json) on top of it, so it never needs the slicer.
 
 Inputs:
-  * the system presets shipped with Creality Print (values), and
+  * the system presets shipped with Creality Print (values). They are found in
+    the standard locations on macOS, Windows and Linux; use --presets-dir for
+    any other install, and
   * a project .3mf saved by the same Creality Print version (key set, value
     shapes and serialisation format; its own values are overwritten).
 """
-import argparse, copy, json, os, zipfile
+import argparse
+import copy
+import glob
+import json
+import os
+import re
+import sys
+import zipfile
 
-SYS_DIRS = [
-    os.path.expanduser("~/Library/Application Support/Creality/Creality Print/7.3/system/Creality"),
-    "/Applications/Creality Print.app/Contents/Resources/profiles/Creality",
-]
+def _version_key(path):
+    """Sort key that puts the newest Creality Print version first."""
+    return [int(n) for n in re.findall(r"\d+", path)]
+
+
+def default_preset_dirs():
+    """Folders that hold Creality Print's system presets, on any OS.
+
+    Each folder contains machine/, process/ and filament/. The per-user copy
+    comes first (it is what the running slicer uses and gets updated online),
+    then the copy shipped inside the application. The newest version wins.
+    """
+    home = os.path.expanduser("~")
+    if sys.platform == "darwin":
+        user = [os.path.join(home, "Library", "Application Support", "Creality", "Creality Print", "*")]
+        app = [os.path.join(root, "Creality Print*.app", "Contents", "Resources", "profiles")
+               for root in ("/Applications", os.path.join(home, "Applications"))]
+    elif sys.platform == "win32":
+        appdata = os.environ.get("APPDATA") or os.path.join(home, "AppData", "Roaming")
+        user = [os.path.join(appdata, "Creality", "Creality Print", "*")]
+        app = [os.path.join(root, "Creality", "Creality Print*", "resources", "profiles")
+               for root in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)"),
+                            os.environ.get("LOCALAPPDATA")) if root]
+    else:  # Linux and other Unix
+        config = os.environ.get("XDG_CONFIG_HOME") or os.path.join(home, ".config")
+        user = [os.path.join(config, "Creality", "Creality Print", "*"),
+                os.path.join(home, ".var", "app", "*", "config", "Creality", "Creality Print", "*")]
+        app = [os.path.join(root, "resources", "profiles")
+               for root in ("/usr/share/CrealityPrint", "/usr/share/Creality Print",
+                            "/opt/CrealityPrint", "/opt/Creality Print")]
+    found = []
+    for patterns, tail in ((user, os.path.join("system", "Creality")), (app, "Creality")):
+        hits = [d for pattern in patterns for d in glob.glob(os.path.join(pattern, tail))]
+        found += sorted((d for d in hits if os.path.isdir(d)), key=_version_key, reverse=True)
+    return found
+
+
+PRESET_DIRS = []   # filled in main(): --presets-dir first, then default_preset_dirs()
 SKIP = {"type", "from", "name", "inherits", "instantiation", "setting_id", "filament_id",
         "compatible_printers", "compatible_printers_condition", "version"}
 # Keys whose slicer-serialised form differs from the preset JSON; keep the slicer's.
@@ -24,12 +67,14 @@ KEEP_SERIALIZED = {"thumbnails", "support_interface_speed"}
 
 def flat(kind, name):
     """Resolve a system preset and its whole `inherits` chain into one dict."""
-    for root in SYS_DIRS:
+    for root in PRESET_DIRS:
         path = os.path.join(root, kind, name + ".json")
         if os.path.exists(path):
             break
     else:
-        raise FileNotFoundError(f"{kind} preset not found: {name}")
+        searched = "\n  ".join(PRESET_DIRS) or "(no Creality Print preset folder found)"
+        raise SystemExit(f"{kind} preset not found: {name}\nsearched:\n  {searched}\n"
+                         f"pass --presets-dir with the folder that holds machine/, process/ and filament/")
     d = json.load(open(path))
     if d.get("inherits"):
         base = flat(kind, d["inherits"])
@@ -77,8 +122,12 @@ def main():
     ap.add_argument("--machine", default="Creality Ender-3 V3 SE 0.4 nozzle")
     ap.add_argument("--process", default="0.20mm Standard @Creality Ender-3 V3 SE 0.4 nozzle")
     ap.add_argument("--filament", default="Soleyin Ultra PLA @Creality Ender-3 V3 SE 0.4 nozzle")
+    ap.add_argument("--presets-dir", action="append", default=[], metavar="DIR",
+                    help="folder with Creality Print's machine/, process/ and filament/ presets; "
+                         "searched before the standard install locations (repeatable)")
     ap.add_argument("-o", "--output", default=os.path.join(os.path.dirname(__file__), "..", "converter", "template", "stock_settings_pla.json"))
     a = ap.parse_args()
+    PRESET_DIRS[:] = [os.path.expanduser(d) for d in a.presets_dir] + default_preset_dirs()
 
     base = project_settings(a.reference)
     fil_ref = project_settings(a.filament_reference) if a.filament_reference else {}
