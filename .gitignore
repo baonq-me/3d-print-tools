@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+# input models: local only (third-party models carry their own licences)
+stl/
+# generated slicer projects (rebuild with converter/stl_to_3mf.py)
+3mf/
+*.3mf
+*.zip
