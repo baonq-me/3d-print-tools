@@ -65,3 +65,17 @@ def temperature_overrides(stock, nozzle_first, nozzle_other, bed):
             raise SystemExit(f"bed temperature {bed} C is outside what the bed supports (0-{BED_MAX_C} C)")
         out["hot_plate_temp"] = out["hot_plate_temp_initial_layer"] = str(bed)
     return out, warnings
+
+
+def process_overrides(stock, layer_height, support):
+    """Validate a custom layer height / support switch -> (process deltas, warnings)."""
+    s, out, warnings = stock["settings"], {}, []
+    if layer_height is not None:
+        lo, hi = float(s["min_layer_height"][0]), float(s["max_layer_height"][0])
+        if not lo <= layer_height <= hi:
+            raise SystemExit(f"layer height {layer_height:g} mm is outside what the nozzle preset allows "
+                             f"({lo:g}-{hi:g} mm)")
+        out["layer_height"] = f"{layer_height:g}"
+    if support:
+        out["enable_support"] = "1"
+    return out, warnings

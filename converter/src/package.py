@@ -11,7 +11,8 @@ import numpy as np
 
 from .config import MATERIALS, MAX_PLATES, PLATE_GAP
 from .mesh import mesh_report, read_stl, weld
-from .settings import build_settings, load_profile, profile_deltas, stock_path, temperature_overrides
+from .settings import (build_settings, load_profile, process_overrides, profile_deltas, stock_path,
+                       temperature_overrides)
 from .thumbnail import thumbnails
 
 NS = ('xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" '
@@ -63,7 +64,8 @@ def plate_origin(index, count, bed_x, bed_y):
     return (index % cols) * bed_x * (1 + PLATE_GAP), -(index // cols) * bed_y * (1 + PLATE_GAP)
 
 
-def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None, nozzle_other=None, bed=None):
+def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None, nozzle_other=None, bed=None,
+            layer_height=None, support=False, extra=None):
     """Write one project. Several STL files give one plate per file."""
     if isinstance(stl_paths, str):
         stl_paths = [stl_paths]
@@ -76,6 +78,16 @@ def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None
     deltas = profile_deltas(profile, material)
     custom, warnings = temperature_overrides(stock, nozzle_first, nozzle_other, bed)
     deltas["filament"].update(custom)
+    custom_process, more = process_overrides(stock, layer_height, support)
+    deltas["process"] = {**deltas["process"], **custom_process}
+    warnings += more
+    custom_machine = {}
+    for key, value in (extra or {}).items():   # --set KEY=VALUE, applied last
+        group = next((g for g in ("process", "filament", "machine") if key in stock["groups"][g]), None)
+        if group is None:
+            raise SystemExit(f"--set {key}: not a setting of the stock presets")
+        deltas[group] = {**deltas[group], key: value}
+        {"process": custom_process, "filament": custom, "machine": custom_machine}[group][key] = value
     colour = MATERIALS[material]
     cfg = build_settings(stock, deltas, colour)
     version = stock["creality_print_version"]
@@ -242,9 +254,10 @@ def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None
     print(f"printer  : {stock['presets']['machine']}")
     print(f"process  : {stock['presets']['process']}  + profile '{profile_name}'")
     print(f"filament : {stock['presets']['filament']}")
-    for group in ("process", "filament"):
+    marked = {"process": custom_process, "filament": custom, "machine": custom_machine}
+    for group in ("process", "filament", "machine"):
         for key, value in deltas[group].items():
-            print(f"    {key} = {value}" + ("   (custom)" if group == "filament" and key in custom else ""))
+            print(f"    {key} = {value}" + ("   (custom)" if key in marked[group] else ""))
     print(f"temps    : nozzle {cfg['nozzle_temperature_initial_layer'][0]} C first layer / "
           f"{cfg['nozzle_temperature'][0]} C other layers, bed {cfg['hot_plate_temp_initial_layer'][0]} C / "
           f"{cfg['hot_plate_temp'][0]} C")

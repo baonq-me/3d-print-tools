@@ -49,6 +49,11 @@ def main():
     ap.add_argument("--nozzle-temp-first", type=int, metavar="C", help="nozzle temperature for the first layer")
     ap.add_argument("--nozzle-temp", type=int, metavar="C", help="nozzle temperature for the other layers")
     ap.add_argument("--bed-temp", type=int, metavar="C", help="bed temperature for all layers")
+    ap.add_argument("--layer-height", type=float, metavar="MM", help="layer height, overrides the profile")
+    ap.add_argument("--support", action="store_true", help="enable supports (the slicer's automatic normal supports)")
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="extra",
+                    help="set any slicer setting of the stock presets, e.g. --set brim_type=outer_only "
+                         "(repeatable, applied last)")
     ap.add_argument("--list-profiles", action="store_true", help="show the available profiles and exit")
     a = ap.parse_args()
     if a.list_profiles:
@@ -58,6 +63,9 @@ def main():
     if not a.stl:
         ap.error("an STL file is required")
     paths = expand_inputs(a.stl)
+    if any("=" not in item for item in a.extra):
+        ap.error("--set needs KEY=VALUE")
+    extra = dict(item.split("=", 1) for item in a.extra)
     profile = load_profile(a.profile)
     first = os.path.abspath(a.stl[0]).rstrip(os.sep)
     if os.path.isdir(first):
@@ -71,7 +79,8 @@ def main():
     material = "" if a.material == "pla" else f"_{a.material}"
     out = a.output or os.path.join(
         OUTPUT_DIR, f"{stem}_claude_ender3{material}{profile.get('suffix', '_' + a.profile)}.3mf")
-    convert(paths, out, a.profile, a.material, a.nozzle_temp_first, a.nozzle_temp, a.bed_temp)
+    convert(paths, out, a.profile, a.material, a.nozzle_temp_first, a.nozzle_temp, a.bed_temp,
+            a.layer_height, a.support, extra)
 
 
 if __name__ == "__main__":
