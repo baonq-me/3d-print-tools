@@ -101,6 +101,24 @@ Filament values of one material must never be reused for another.
    snapshot for that material.
 4. Look at `Metadata/plate_1.png`.
 
-Do not start the Creality Print binary from a script to test: any invocation,
-even `--help`, opens the GUI. Bambu Studio's command line can slice the mesh
-but ignores the embedded settings, so it only proves the geometry loads.
+## Slicing from the command line
+
+Creality Print 7.3 has an undocumented command-line mode. Close the Creality
+Print window first (the two share their configuration), then:
+
+```sh
+"/Applications/Creality Print.app/Contents/MacOS/CrealityPrint" \
+    --cli --slice 1 --need-gcode-file --outputdir out/ project.3mf
+```
+
+- `--slice 1` is the plate number; the result is `out/plate_1.gcode`.
+- Without `--cli` the options are parsed as GUI options: they are rejected
+  ("GUI parameter parsing failed") or the window opens.
+- There is no `--export-3mf`; the mode only slices.
+- The log marks ordinary lines as `[error]`. Judge success by exit code 0 and
+  the G-code file.
+- The G-code header shows whether the embedded settings were used: layer
+  count, temperatures, and the printer's start G-code.
+
+Tested on macOS with Creality Print 7.3.1. Source of the `--cli` switch:
+<https://www.matw.pl/en/2026/11/20/creality-print-creality-hi-api-cli-integration/>.

@@ -22,6 +22,7 @@ Python 3.12 or newer (required by the pinned numpy). The only dependency is nump
 .venv/bin/python converter/stl_to_3mf.py model.stl -p hf_fast      # high-flow nozzle
 .venv/bin/python converter/stl_to_3mf.py model.stl -m petg -p fast
 .venv/bin/python converter/stl_to_3mf.py model.stl --nozzle-temp-first 220 --nozzle-temp 210
+.venv/bin/python converter/stl_to_3mf.py model.stl -p hf_fast --layer-height 0.16 --support
 .venv/bin/python converter/stl_to_3mf.py model.stl -p fast -o out.3mf
 .venv/bin/python converter/stl_to_3mf.py folder_of_stls/ -p hf_fast   # one project, one plate per STL
 .venv/bin/python converter/stl_to_3mf.py a.stl b.stl c.stl -o 3mf/set.3mf
@@ -35,6 +36,9 @@ Python 3.12 or newer (required by the pinned numpy). The only dependency is nump
 | `--nozzle-temp-first C` | nozzle temperature for the first layer |
 | `--nozzle-temp C` | nozzle temperature for the other layers |
 | `--bed-temp C` | bed temperature for all layers |
+| `--layer-height MM` | layer height, overrides the profile; must be within the nozzle preset's range (0.08-0.36 mm) |
+| `--support` | enable supports (the slicer's automatic normal supports); off by default |
+| `--set KEY=VALUE` | set any setting of the stock presets, for example `--set brim_type=outer_only --set brim_width=8`; repeatable, applied last; unknown keys are refused |
 | `-o`, `--output` | output path; overrides the default location and name |
 | `--list-profiles` | show the available profiles and exit |
 
@@ -90,8 +94,9 @@ Open the file in Creality Print and check, before slicing:
 
 ## Limitations
 
-- Creality Print has no headless mode, so the generated projects are not
-  loaded in the slicer by any script here. Opening the file is the final check.
-- Print times are unknown until you slice.
-- No automatic orientation, no packing of several parts on one plate, no
-  supports.
+- The converter does not slice. Print time is known after slicing, in the
+  Creality Print window or from its command line
+  ([project-format.md](project-format.md#slicing-from-the-command-line)).
+- No automatic orientation and no packing of several parts on one plate.
+- `--layer-height`, `--support` and `--set` do not change the output file name; use
+  `-o` to keep such a file apart from the plain one.

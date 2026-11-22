@@ -39,7 +39,8 @@ described below.
 - `converter/src/mesh.py` — reads and welds the STL, watertight check, volume.
 - `converter/src/settings.py` — loads a profile and the stock snapshot,
   applies the deltas (`build_settings()`), validates custom temperatures
-  (`temperature_overrides()`).
+  (`temperature_overrides()`) and the custom layer height and support switch
+  (`process_overrides()`).
 - `converter/src/thumbnail.py` — numpy point-splat renderer and PNG writer.
 - `converter/src/package.py` — `convert()`: plate layout, every XML and JSON
   entry, the zip.
@@ -83,10 +84,12 @@ described below.
   plate with Z-min at 0. If a part is tilted in the STL, say so and leave it.
 - **Convert numpy scalars with `float()` before formatting into XML.** A
   `repr()` of a numpy value writes `np.float64(110.0)` into the file.
-- **Do not launch the Creality Print binary to test.** It has no headless
-  mode: any invocation, even `--help`, opens the GUI and can interfere with a
-  running session. Bambu Studio's CLI can slice the mesh but ignores the
-  embedded settings, so it only proves the geometry loads.
+- **Slice with Creality Print's hidden CLI to check a file**, only while its
+  window is closed (the CLI shares the app's configuration):
+  `"/Applications/Creality Print.app/Contents/MacOS/CrealityPrint" --cli --slice 1 --need-gcode-file --outputdir out/ project.3mf`
+  writes `out/plate_1.gcode`. Without `--cli` the same options are rejected
+  or open the GUI. Success is exit code 0 plus the G-code file; the log marks
+  ordinary lines as `[error]`. There is no `--export-3mf`.
 
 ## Verifying a change
 
@@ -99,8 +102,9 @@ described below.
    `converter/template/stock_settings_<material>.json`.
 4. Look at `Metadata/plate_1.png` from one output.
 5. For a refactor, compare the package with one generated before the change.
-6. Final proof is manual: open the file in Creality Print, confirm the preset
-   names, slice.
+6. Slice it with the Creality Print CLI (above) and check the G-code header:
+   layer count, temperatures, bed size.
+7. Open the file in Creality Print for a visual check when it matters.
 
 ## Conventions
 

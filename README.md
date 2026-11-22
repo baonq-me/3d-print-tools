@@ -55,8 +55,9 @@ CC0 1.0 (public domain).
 
 - The converter keeps the orientation stored in the STL. It never rotates or
   scales a model.
-- Creality Print has no headless mode, so opening the file in the slicer is the
-  final check. Print time is known only after slicing.
+- The converter does not slice; print time is known after slicing. Generated
+  projects have been sliced with Creality Print 7.3.1 and its settings were
+  applied.
 - All profiles stay within the printer's rated 250 mm/s and 2500 mm/s².
 - `stl/` (input models) and `3mf/` (generated projects) are local folders and
   are not part of the repository.
