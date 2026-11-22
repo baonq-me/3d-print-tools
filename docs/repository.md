@@ -15,6 +15,7 @@ Where things go. The full rule set is in [repo-rules.md](repo-rules.md).
 | `changelog/` | change history | one file per day, `YYYY-MM-DD.md` |
 | `samples/` | one sample model and the project made from it | 3DBenchy (CC0); regenerate the `.3mf` when the converter output changes |
 | `stl/` | input models | **local only**, git-ignored |
+| `gcode/` | sliced G-code | **local only**, git-ignored; made with the Creality Print command line |
 | `3mf/` | generated projects | **local only**, git-ignored; rebuild with the converter |
 
 ## converter/

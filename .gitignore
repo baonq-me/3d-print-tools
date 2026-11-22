@@ -8,4 +8,6 @@ stl/
 3mf/
 *.3mf
 !samples/*.3mf
+# sliced G-code: local only
+gcode/
 *.zip

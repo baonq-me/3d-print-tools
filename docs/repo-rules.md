@@ -26,6 +26,7 @@ These rules apply to people and AI agents alike. Where things live today:
 | Change history | `changelog/YYYY-MM-DD.md` | one file per day; create today's file or append to it |
 | Sample model and project | `samples/` | only models whose licence allows redistribution; no machine paths inside the `.3mf` |
 | Input models | `stl/` | local only |
+| Sliced G-code | `gcode/` | local only; named after the project it was sliced from |
 | Generated projects | `3mf/` | local only; every generated `.3mf` goes here |
 | Throwaway scripts and test output | outside the repository | |
 
