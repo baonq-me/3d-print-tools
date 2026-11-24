@@ -6,6 +6,8 @@ ROOT = os.path.dirname(CONVERTER_DIR)
 PROFILE_DIR = os.path.join(CONVERTER_DIR, "profiles")
 TEMPLATE_DIR = os.path.join(CONVERTER_DIR, "template")
 OUTPUT_DIR = os.path.join(ROOT, "3mf")
+STL_DIR = os.path.join(ROOT, "stl")
+GCODE_DIR = os.path.join(ROOT, "gcode")
 
 MATERIALS = {"pla": "#F2754E", "petg": "#3E8ED0"}  # material -> preview colour
 HOTEND_MAX_C, BED_MAX_C = 260, 100   # Ender-3 V3 SE hardware limits

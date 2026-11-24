@@ -65,8 +65,13 @@ def plate_origin(index, count, bed_x, bed_y):
 
 
 def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None, nozzle_other=None, bed=None,
-            layer_height=None, support=False, extra=None):
-    """Write one project. Several STL files give one plate per file."""
+            layer_height=None, support=False, extra=None, verbose=True):
+    """Write one project. Several STL files give one plate per file.
+
+    Returns {"output", "plates": [...], "warnings": [...], "settings": {...}}.
+    verbose=False skips the printed report (used by the web UI).
+    """
+    say = print if verbose else (lambda *a, **k: None)
     if isinstance(stl_paths, str):
         stl_paths = [stl_paths]
     count = len(stl_paths)
@@ -98,6 +103,7 @@ def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None
 
     files = [("[Content_Types].xml", CONTENT_TYPES)]
     object_files, resources, items, objects, plates, assemble, plate_files, rels = [], [], [], [], [], [], [], []
+    plate_info = []
     for i, stl_path in enumerate(stl_paths):
         n, mesh_id, obj_id = i + 1, 2 * i + 1, 2 * i + 2
         tag = f"{name_of(stl_path)}: " if count > 1 else ""
@@ -166,10 +172,14 @@ def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None
                                            f"Metadata/plate_no_light_{n}.png", f"Metadata/top_{n}.png",
                                            f"Metadata/pick_{n}.png")]
 
-        print(f"model    : {name}  {len(faces)} triangles, {len(verts)} vertices"
-              + (f"  -> plate {n}" if count > 1 else ""))
-        print(f"size     : {size[0]:.2f} x {size[1]:.2f} x {size[2]:.2f} mm, "
-              f"volume {report['volume_mm3'] / 1000:.2f} cm3")
+        plate_info.append({"plate": n, "name": name, "triangles": int(len(faces)),
+                           "size_mm": [round(float(v), 2) for v in size],
+                           "volume_cm3": round(report["volume_mm3"] / 1000, 2),
+                           "watertight": not (report["open_edges"] or report["flipped_edges"])})
+        say(f"model    : {name}  {len(faces)} triangles, {len(verts)} vertices"
+            + (f"  -> plate {n}" if count > 1 else ""))
+        say(f"size     : {size[0]:.2f} x {size[1]:.2f} x {size[2]:.2f} mm, "
+            f"volume {report['volume_mm3'] / 1000:.2f} cm3")
         if report["open_edges"] or report["flipped_edges"]:
             warnings.append(f"{tag}mesh is not watertight ({report['open_edges']} open edges, "
                             f"{report['flipped_edges']} inconsistent edges); repair it in the slicer")
@@ -250,21 +260,36 @@ def convert(stl_paths, out_path, profile_name, material="pla", nozzle_first=None
             z.writestr(arcname, data)
 
     if count > 1:
-        print(f"plates   : {count}, one STL per plate")
-    print(f"printer  : {stock['presets']['machine']}")
-    print(f"process  : {stock['presets']['process']}  + profile '{profile_name}'")
-    print(f"filament : {stock['presets']['filament']}")
+        say(f"plates   : {count}, one STL per plate")
+    say(f"printer  : {stock['presets']['machine']}")
+    say(f"process  : {stock['presets']['process']}  + profile '{profile_name}'")
+    say(f"filament : {stock['presets']['filament']}")
     marked = {"process": custom_process, "filament": custom, "machine": custom_machine}
     for group in ("process", "filament", "machine"):
         for key, value in deltas[group].items():
-            print(f"    {key} = {value}" + ("   (custom)" if key in marked[group] else ""))
-    print(f"temps    : nozzle {cfg['nozzle_temperature_initial_layer'][0]} C first layer / "
+            say(f"    {key} = {value}" + ("   (custom)" if key in marked[group] else ""))
+    say(f"temps    : nozzle {cfg['nozzle_temperature_initial_layer'][0]} C first layer / "
           f"{cfg['nozzle_temperature'][0]} C other layers, bed {cfg['hot_plate_temp_initial_layer'][0]} C / "
           f"{cfg['hot_plate_temp'][0]} C")
     for w in warnings:
-        print(f"WARNING  : {w}", file=sys.stderr)
-    print(f"wrote    : {out_path}  ({os.path.getsize(out_path) / 1e6:.1f} MB)")
-    return not warnings
+        if verbose:
+            print(f"WARNING  : {w}", file=sys.stderr)
+    say(f"wrote    : {out_path}  ({os.path.getsize(out_path) / 1e6:.1f} MB)")
+    first = lambda key: float(cfg[key][0] if isinstance(cfg[key], list) else cfg[key])
+    return {
+        "output": out_path,
+        "plates": plate_info,
+        "warnings": warnings,
+        "settings": {
+            "printer": stock["presets"]["machine"], "process": stock["presets"]["process"],
+            "filament": stock["presets"]["filament"], "profile": profile_name, "material": material,
+            "layer_height": first("layer_height"), "first_layer_height": first("initial_layer_print_height"),
+            "nozzle_first_c": first("nozzle_temperature_initial_layer"), "nozzle_other_c": first("nozzle_temperature"),
+            "bed_c": first("hot_plate_temp"), "bed_first_c": first("hot_plate_temp_initial_layer"),
+            "support": cfg["enable_support"] in ("1", ["1"]),
+            "changed": {g: dict(marked[g]) for g in marked},
+        },
+    }
 
 
 def name_of(path):
