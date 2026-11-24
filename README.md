@@ -33,7 +33,14 @@ python3 -m venv .venv
 .venv/bin/python converter/stl_to_3mf.py model.stl -m petg -p fast  # PETG
 .venv/bin/python converter/stl_to_3mf.py model.stl --nozzle-temp-first 220 --nozzle-temp 210 --bed-temp 65
 .venv/bin/python converter/stl_to_3mf.py folder_of_stls/ -p hf_fast # one plate per STL
+.venv/bin/python converter/stl_to_3mf.py model.stl -p hf_fast --slice   # + G-code in gcode/
 ```
+
+Or use the web UI: `.venv/bin/python web/app.py`, then open
+<http://127.0.0.1:8000>. Drop STL files, pick the settings, convert, and
+optionally slice to see the real print time and a layer preview. Files are
+saved in `stl/`, `3mf/` and `gcode/`, as with the command line
+([docs/web-ui.md](docs/web-ui.md)).
 
 The result lands in `3mf/`, for example `3mf/model_claude_ender3_hf_fast.3mf`.
 Open it in Creality Print, check that the three preset names loaded and that
@@ -55,9 +62,9 @@ CC0 1.0 (public domain).
 
 - The converter keeps the orientation stored in the STL. It never rotates or
   scales a model.
-- The converter does not slice; print time is known after slicing. Generated
-  projects have been sliced with Creality Print 7.3.1 and its settings were
-  applied.
+- Print time is known after slicing: `--slice` or "Convert & slice" in the web
+  UI run the Creality Print command line (its window must be closed) and check
+  that the G-code uses the project's settings. Tested with Creality Print 7.3.1.
 - All profiles stay within the printer's rated 250 mm/s and 2500 mm/s².
 - `stl/` (input models) and `3mf/` (generated projects) are local folders and
   are not part of the repository.
@@ -66,6 +73,8 @@ CC0 1.0 (public domain).
 
 - [docs/usage.md](docs/usage.md) — options, output names, multi-plate projects,
   what to check after converting
+- [docs/web-ui.md](docs/web-ui.md) — the local web page: running it, where
+  files are saved, shortcuts, API
 - [docs/profiles.md](docs/profiles.md) — stock presets and every setting each
   profile changes, for PLA and PETG; how to add a profile
 - [docs/project-format.md](docs/project-format.md) — what is inside the `.3mf`,

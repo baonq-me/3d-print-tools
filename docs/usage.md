@@ -12,7 +12,8 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Python 3.12 or newer (required by the pinned numpy). The only dependency is numpy.
+Python 3.12 or newer (required by the pinned numpy). The converter needs only numpy;
+the other packages in `requirements.txt` are for the web UI ([web-ui.md](web-ui.md)).
 
 ## Commands
 
@@ -24,6 +25,7 @@ Python 3.12 or newer (required by the pinned numpy). The only dependency is nump
 .venv/bin/python converter/stl_to_3mf.py model.stl --nozzle-temp-first 220 --nozzle-temp 210
 .venv/bin/python converter/stl_to_3mf.py model.stl -p hf_fast --layer-height 0.16 --support
 .venv/bin/python converter/stl_to_3mf.py model.stl -p fast -o out.3mf
+.venv/bin/python converter/stl_to_3mf.py model.stl -p hf_fast --slice   # also G-code in gcode/
 .venv/bin/python converter/stl_to_3mf.py folder_of_stls/ -p hf_fast   # one project, one plate per STL
 .venv/bin/python converter/stl_to_3mf.py a.stl b.stl c.stl -o 3mf/set.3mf
 .venv/bin/python converter/stl_to_3mf.py --list-profiles
@@ -40,18 +42,32 @@ Python 3.12 or newer (required by the pinned numpy). The only dependency is nump
 | `--support` | enable supports (the slicer's automatic normal supports); off by default |
 | `--set KEY=VALUE` | set any setting of the stock presets, for example `--set brim_type=outer_only --set brim_width=8`; repeatable, applied last; unknown keys are refused |
 | `-o`, `--output` | output path; overrides the default location and name |
+| `--slice` | also slice with the Creality Print command line; G-code goes to `gcode/` with the project's name (`_plate<n>` per plate), and the G-code is checked against the settings. The Creality Print window must be closed |
 | `--list-profiles` | show the available profiles and exit |
 
 ## Output files
 
 Files go to `3mf/` in the repository root, named
-`<name>_claude_ender3[_<material>]<profile suffix>.3mf`, for example
+`<name>_claude_ender3[_<material>]<profile suffix>[<variant>].3mf`, for example
 `3mf/3DBenchy_claude_ender3.3mf`, `3mf/3DBenchy_claude_ender3_hf_fast.3mf` and
 `3mf/3DBenchy_claude_ender3_petg_fast.3mf`. PLA has no material suffix.
 
 `<name>` is the STL name. For a folder it is the folder name (or its parent
 when the folder is just called `files` or `stl`); for several files it is
 `<first stl>_and_<n>_more`.
+
+`<variant>` names the settings that change the result, so variants of one
+model do not overwrite each other. A run without them keeps the plain name.
+
+| Setting | Adds | Example |
+|---|---|---|
+| `--layer-height 0.16` | `_0.16` | `foot_claude_ender3_hf_fast_0.16.3mf` |
+| `--support` | `_support` | `…_hf_fast_support.3mf` |
+| `--set support_type=tree(auto)` | `_tree` | `…_hf_fast_support_tree.3mf` |
+| `--set brim_type=outer_only` (`--set brim_width=8`) | `_brim` (`_brim8`) | `…_hf_fast_support_tree_brim8.3mf` |
+| any other `--set` values | `_set` + 6 hex digits of their hash | `…_hf_fast_set5af8e6.3mf` |
+
+The web UI uses the same names ([web-ui.md](web-ui.md)).
 
 ## Custom temperatures
 
@@ -94,9 +110,8 @@ Open the file in Creality Print and check, before slicing:
 
 ## Limitations
 
-- The converter does not slice. Print time is known after slicing, in the
-  Creality Print window or from its command line
-  ([project-format.md](project-format.md#slicing-from-the-command-line)).
+- Print time is known after slicing: use `--slice`, the web UI, or the
+  Creality Print window ([project-format.md](project-format.md#slicing-from-the-command-line)).
 - No automatic orientation and no packing of several parts on one plate.
-- `--layer-height`, `--support` and `--set` do not change the output file name; use
-  `-o` to keep such a file apart from the plain one.
+- Temperature options do not change the output file name (layer height,
+  supports and `--set` do, see above); use `-o` to keep such a file apart.

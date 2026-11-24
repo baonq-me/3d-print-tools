@@ -103,6 +103,9 @@ Filament values of one material must never be reused for another.
 
 ## Slicing from the command line
 
+The converter does this for you with `--slice`, and the web UI with "Convert &
+slice" (`converter/src/slicer.py`). By hand:
+
 Creality Print 7.3 has an undocumented command-line mode. Close the Creality
 Print window first (the two share their configuration), then:
 

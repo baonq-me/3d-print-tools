@@ -12,7 +12,7 @@ These rules apply to people and AI agents alike. Where things live today:
 | Clone | `git clone https://github.com/baonq-me/3d-print-tools.git` |
 | Python | `python3 -m venv .venv` then `.venv/bin/pip install -r requirements.txt`; packages go into the venv, never into the system Python |
 | Run | always through `.venv/bin/python` |
-| Slicer | Creality Print 7.3 is needed only to open the results and to regenerate the stock snapshots |
+| Slicer | Creality Print 7.3 is needed to open the results, to slice (`--slice`, web UI) and to regenerate the stock snapshots |
 
 ## 2. Structure: where each kind of file goes
 
@@ -21,7 +21,10 @@ These rules apply to people and AI agents alike. Where things live today:
 | Converter code | `converter/src/<area>.py` | `converter/stl_to_3mf.py` holds only the command line |
 | Print profiles | `converter/profiles/<name>.json` | changes on top of the stock presets; every profile has a block for every material |
 | Stock snapshots | `converter/template/` | generated, never edited by hand |
+| Web UI | `web/app.py`, `web/static/` | the server calls `converter/src`; no converter logic in `web/` |
+| Third-party browser code | `web/static/vendor/<name>-<version>/` | pinned version, unmodified, with its licence file |
 | Maintenance scripts | `tools/` | standard library where possible |
+| Plans | `plans/plan_<topic>.html` | meaningful file name; static HTML that renders without JavaScript; checked at phone and desktop width |
 | Knowledge | `docs/<topic>.md` | one topic per file, linked from the README |
 | Change history | `changelog/YYYY-MM-DD.md` | one file per day; create today's file or append to it |
 | Sample model and project | `samples/` | only models whose licence allows redistribution; no machine paths inside the `.3mf` |
@@ -60,7 +63,8 @@ New top-level folders need a row in this table and in
 
 | When you change… | also update |
 |---|---|
-| command-line options or output names | [usage.md](usage.md), the README quick start |
+| command-line options or output names | [usage.md](usage.md), the README quick start, and the web UI if it offers the option |
+| the web UI or its API | [web-ui.md](web-ui.md) |
 | a profile or a stock snapshot | [profiles.md](profiles.md) |
 | what goes into the `.3mf` | [project-format.md](project-format.md), and regenerate `samples/3DBenchy_claude_ender3.3mf` |
 | folders or these rules | this file and [repository.md](repository.md) |
