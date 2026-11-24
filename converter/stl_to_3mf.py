@@ -12,14 +12,21 @@ by default.
     python converter/stl_to_3mf.py model.stl -m petg -p fast    # PETG
     python converter/stl_to_3mf.py model.stl --nozzle-temp-first 220 --nozzle-temp 210
     python converter/stl_to_3mf.py model.stl -p fast -o out.3mf
+    python converter/stl_to_3mf.py model.stl -p hf_fast --slice   # also G-code in gcode/
     python converter/stl_to_3mf.py --list-profiles
 """
 import argparse
 import os
+import shutil
+import sys
+import tempfile
 
-from src.config import GENERIC_DIRS, MATERIALS, OUTPUT_DIR
+from src.config import GCODE_DIR, MATERIALS, OUTPUT_DIR
+from src.gcode import check_settings, read_header
+from src.naming import output_name, stem_for_inputs
 from src.package import convert
 from src.settings import list_profiles, load_profile
+from src import slicer
 
 
 def expand_inputs(inputs):
@@ -43,7 +50,7 @@ def main():
     ap.add_argument("stl", nargs="*", help="input STL file (binary or ASCII). Several files, or a folder of "
                                            "STL files, give one project with one plate per file")
     ap.add_argument("-o", "--output", help="output .3mf (default: 3mf/<stl or folder name>_claude_ender3"
-                                           "[_<material>]<profile suffix>.3mf next to this script)")
+                                           "[_<material>]<profile suffix>[<variant>].3mf in the repository)")
     ap.add_argument("-p", "--profile", default="quality", help="profile name in profiles/ or path to a profile JSON")
     ap.add_argument("-m", "--material", default="pla", choices=sorted(MATERIALS), help="filament type (default: pla)")
     ap.add_argument("--nozzle-temp-first", type=int, metavar="C", help="nozzle temperature for the first layer")
@@ -54,6 +61,9 @@ def main():
     ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", dest="extra",
                     help="set any slicer setting of the stock presets, e.g. --set brim_type=outer_only "
                          "(repeatable, applied last)")
+    ap.add_argument("--slice", action="store_true",
+                    help="also slice with the Creality Print command line; G-code goes to gcode/ "
+                         "(the Creality Print window must be closed)")
     ap.add_argument("--list-profiles", action="store_true", help="show the available profiles and exit")
     a = ap.parse_args()
     if a.list_profiles:
@@ -67,21 +77,40 @@ def main():
         ap.error("--set needs KEY=VALUE")
     extra = dict(item.split("=", 1) for item in a.extra)
     profile = load_profile(a.profile)
-    first = os.path.abspath(a.stl[0]).rstrip(os.sep)
-    if os.path.isdir(first):
-        # "files" or "stl" says nothing and would collide between downloads: use the parent's name
-        stem = os.path.basename(os.path.dirname(first) if os.path.basename(first).lower() in GENERIC_DIRS
-                                else first)
-    else:
-        stem = os.path.splitext(os.path.basename(first))[0]
-    if len(paths) > 1 and not os.path.isdir(first):
-        stem += f"_and_{len(paths) - 1}_more"
-    material = "" if a.material == "pla" else f"_{a.material}"
+    stem = stem_for_inputs(a.stl, len(paths))
     out = a.output or os.path.join(
-        OUTPUT_DIR, f"{stem}_claude_ender3{material}{profile.get('suffix', '_' + a.profile)}.3mf")
-    convert(paths, out, a.profile, a.material, a.nozzle_temp_first, a.nozzle_temp, a.bed_temp,
-            a.layer_height, a.support, extra)
+        OUTPUT_DIR, output_name(stem, a.material, a.profile, profile, a.layer_height, a.support, extra))
+    result = convert(paths, out, a.profile, a.material, a.nozzle_temp_first, a.nozzle_temp, a.bed_temp,
+                     a.layer_height, a.support, extra)
+    if a.slice:
+        slice_project(out, len(result["plates"]), result["settings"])
 
+
+def slice_project(project, plates, settings):
+    exe = slicer.find_executable()
+    if not exe:
+        raise SystemExit("--slice: Creality Print was not found; set CREALITY_PRINT to its executable")
+    if slicer.gui_running(exe):
+        raise SystemExit("--slice: close the Creality Print window first (its command line shares the "
+                         "app's settings)")
+    os.makedirs(GCODE_DIR, exist_ok=True)
+    work = tempfile.mkdtemp(prefix="slice_")
+    try:
+        for n, name in slicer.gcode_names(project, plates).items():
+            try:
+                gcode = slicer.slice_plate(project, work, n, exe)
+            except slicer.SlicerError as e:
+                raise SystemExit(f"--slice: {e}")
+            dest = os.path.join(GCODE_DIR, name)
+            shutil.move(gcode, dest)
+            h = read_header(dest)
+            print(f"gcode    : {dest}  plate {n}: {h['time_s'] / 60:.1f} min, {h['filament_m']:.2f} m, "
+                  f"{h['layers']} layers")
+            for c in check_settings(h, settings):
+                if not c["ok"]:
+                    print(f"WARNING  : plate {n}: {c['text']}", file=sys.stderr)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
 if __name__ == "__main__":
     main()
