@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3d-print-tools</title>
+<meta name="description" content="Convert STL files into Creality Print projects and G-code for the Ender-3 V3 SE.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+<script type="importmap">
+{ "imports": {
+  "three": "/static/vendor/three-0.160.0/three.module.min.js",
+  "three/OrbitControls": "/static/vendor/three-0.160.0/OrbitControls.js",
+  "three/STLLoader": "/static/vendor/three-0.160.0/STLLoader.js"
+} }
+</script>
+<script>
+  // apply the saved theme before first paint (dark is the default)
+  try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<script type="module" src="/static/app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-error" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="brand"><span class="logo"><svg class="ico"><use href="#i-cube"/></svg></span><span>3d-print-tools</span></div>
+  <span class="chip mono" id="printerChip">Ender-3 V3 SE · 0.4 nozzle</span>
+  <span class="spacer"></span>
+  <span class="chip" id="slicerChip" role="status">Checking slicer…</span>
+  <button class="iconbtn" id="btnShortcuts" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"><svg class="ico" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
+  <button class="iconbtn" id="btnTheme" type="button" aria-label="Switch to light theme" title="Switch theme"><svg class="ico" aria-hidden="true"><use href="#i-sun"/></svg></button>
+</header>
+
+<nav class="stepper" aria-label="Progress">
+  <ol>
+    <li><button type="button" class="step" data-step="1"><i aria-hidden="true">1</i><span>Add files</span></button></li>
+    <li aria-hidden="true" class="sep">—</li>
+    <li><button type="button" class="step" data-step="2"><i aria-hidden="true">2</i><span>Settings</span></button></li>
+    <li aria-hidden="true" class="sep">—</li>
+    <li><button type="button" class="step" data-step="3"><i aria-hidden="true">3</i><span>Result</span></button></li>
+  </ol>
+</nav>
+
+<main id="main" class="layout" tabindex="-1">
+  <!-- ============================== files ============================== -->
+  <section class="pane files" aria-labelledby="filesTitle">
+    <h2 class="pane-title" id="filesTitle">Files <span class="count" id="fileCount">0</span></h2>
+    <div class="drop" id="dropSmall">
+      <svg class="ico drop-ico" aria-hidden="true"><use href="#i-upload"/></svg>
+      <b>Drop STL files or a folder</b>
+      <span>or <button type="button" class="linkbtn" data-browse="files">browse files</button> · <button type="button" class="linkbtn" data-browse="folder">a folder</button> <kbd class="kbd">Ctrl O</kbd></span>
+    </div>
+    <input type="file" id="fileInput" accept=".stl,.STL" multiple hidden>
+    <input type="file" id="folderInput" webkitdirectory multiple hidden>
+    <ul class="filelist" id="fileList" aria-label="Files in this project"></ul>
+    <p class="hint" id="plateHint"></p>
+
+    <div class="library">
+      <h3 class="pane-title">Already in stl/ <span class="count" id="libCount">0</span></h3>
+      <label class="sr-only" for="libFilter">Filter saved STL files</label>
+      <input class="input small" id="libFilter" type="search" placeholder="Filter" autocomplete="off">
+      <ul class="liblist" id="libList"></ul>
+      <p class="hint" id="libTotals"></p>
+    </div>
+  </section>
+
+  <!-- ============================== preview ============================== -->
+  <section class="pane preview" id="previewPane" aria-labelledby="previewTitle">
+    <div class="preview-head">
+      <h2 class="pane-title" id="previewTitle">Preview</h2>
+      <span class="spacer"></span>
+      <div class="tabs" role="tablist" aria-label="View">
+        <button type="button" role="tab" id="tab3d" aria-selected="true" data-view="iso">3D</button>
+        <button type="button" role="tab" id="tabTop" aria-selected="false" data-view="top">Top</button>
+      </div>
+    </div>
+    <div class="empty" id="emptyState">
+      <div class="drop big" id="dropBig">
+        <svg class="ico drop-ico" aria-hidden="true"><use href="#i-upload"/></svg>
+        <b>Drop STL files here</b>
+        <span>or <button type="button" class="linkbtn" data-browse="files">browse</button> · <kbd class="kbd">Ctrl O</kbd></span>
+        <span class="hint">Binary or ASCII STL · up to 36 files per project · 200 MB each</span>
+      </div>
+      <button type="button" class="btn ghost" id="btnSample">Try the sample (3DBenchy)</button>
+    </div>
+    <div class="stage" id="stage" hidden>
+      <canvas id="viewer" aria-label="3D view of the part on the 220 by 220 mm bed" role="img"></canvas>
+      <p class="stage-msg" id="stageMsg" hidden></p>
+      <span class="stage-caption mono">220 × 220 mm bed · drag to rotate · scroll to zoom</span>
+    </div>
+    <div id="notices" class="notices" aria-live="polite"></div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <!-- ============================== settings ============================== -->
+  <section class="pane settings" id="settingsPane" aria-labelledby="settingsTitle">
+    <h2 class="pane-title" id="settingsTitle">Settings</h2>
+    <form id="settingsForm" novalidate>
+      <div class="errsummary" id="errSummary" tabindex="-1" hidden></div>
+
+      <fieldset class="field">
+        <legend class="lbl">Material</legend>
+        <div class="seg" id="materialSeg"></div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend class="lbl">Profile</legend>
+        <div class="prof" id="profileList"></div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend class="lbl">Temperatures (°C)</legend>
+        <div class="row3">
+          <div class="fld" data-field="nozzle_first">
+            <label for="nozzle_first">First layer</label>
+            <input class="input mono" id="nozzle_first" name="nozzle_first" type="number" inputmode="numeric" step="1" aria-describedby="nozzle_first_err">
+            <button type="button" class="reset" data-reset="nozzle_first" hidden>reset</button>
+            <div class="errtxt" id="nozzle_first_err"></div>
+          </div>
+          <div class="fld" data-field="nozzle_other">
+            <label for="nozzle_other">Other layers</label>
+            <input class="input mono" id="nozzle_other" name="nozzle_other" type="number" inputmode="numeric" step="1" aria-describedby="nozzle_other_err">
+            <button type="button" class="reset" data-reset="nozzle_other" hidden>reset</button>
+            <div class="errtxt" id="nozzle_other_err"></div>
+          </div>
+          <div class="fld" data-field="bed">
+            <label for="bed">Bed</label>
+            <input class="input mono" id="bed" name="bed" type="number" inputmode="numeric" step="1" aria-describedby="bed_err">
+            <button type="button" class="reset" data-reset="bed" hidden>reset</button>
+            <div class="errtxt" id="bed_err"></div>
+          </div>
+        </div>
+        <p class="hint" id="tempHint"></p>
+      </fieldset>
+
+      <div class="field fld" data-field="layer_height">
+        <label class="lbl" for="layer_height">Layer height (mm)</label>
+        <input class="input mono" id="layer_height" name="layer_height" type="number" inputmode="decimal" step="0.01" aria-describedby="layer_height_hint layer_height_err">
+        <button type="button" class="reset" data-reset="layer_height" hidden>reset</button>
+        <p class="hint" id="layer_height_hint"></p>
+        <div class="errtxt" id="layer_height_err"></div>
+      </div>
+
+      <div class="sw">
+        <div><span class="swlabel" id="supportLabel">Supports</span><small id="supportSub">Off</small></div>
+        <button type="button" class="tog" id="support" role="switch" aria-checked="false" aria-labelledby="supportLabel"></button>
+      </div>
+      <div class="sub" id="supportOpts" hidden>
+        <div class="row2">
+          <div class="fld">
+            <label for="support_type">Type</label>
+            <select class="input" id="support_type">
+              <option value="tree(auto)">Tree</option>
+              <option value="normal(auto)">Normal</option>
+            </select>
+          </div>
+          <div class="fld" data-field="support_threshold">
+            <label for="support_threshold">Overhang angle (°)</label>
+            <input class="input mono" id="support_threshold" type="number" inputmode="numeric" step="1" aria-describedby="support_threshold_err">
+            <div class="errtxt" id="support_threshold_err"></div>
+          </div>
+        </div>
+        <p class="hint">Faces steeper than this angle get supports. 30° is the slicer default; raise it to support more.</p>
+      </div>
+
+      <div class="sw">
+        <div><span class="swlabel" id="brimLabel">Brim</span><small id="brimSub">Off</small></div>
+        <button type="button" class="tog" id="brim" role="switch" aria-checked="false" aria-labelledby="brimLabel"></button>
+      </div>
+      <div class="sub" id="brimOpts" hidden>
+        <div class="fld" data-field="brim_width">
+          <label for="brim_width">Width (mm)</label>
+          <input class="input mono" id="brim_width" type="number" inputmode="decimal" step="0.5" aria-describedby="brim_width_err">
+          <div class="errtxt" id="brim_width_err"></div>
+        </div>
+      </div>
+
+      <details class="disc" id="advanced">
+        <summary><svg class="ico chev" aria-hidden="true"><use href="#i-down"/></svg>Advanced settings <span class="badge" id="advCount" hidden></span></summary>
+        <div class="disc-in">
+          <div id="kvRows"></div>
+          <button type="button" class="btn small" id="btnAddKv"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg>Add setting</button>
+          <p class="hint">Any key from the stock presets, applied last (the command line's <code>--set KEY=VALUE</code>). Values are passed to the slicer as typed.</p>
+          <datalist id="settingKeys"></datalist>
+        </div>
+      </details>
+    </form>
+  </section>
+
+  <!-- ============================== result ============================== -->
+  <section class="pane result" id="resultPane" aria-labelledby="resultTitle" hidden>
+    <div class="result-head">
+      <button type="button" class="btn ghost" id="btnBack"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Back to settings</button>
+      <h2 class="pane-title" id="resultTitle" tabindex="-1">Result</h2>
+    </div>
+    <div class="res">
+      <div class="rescol">
+        <div class="rcard" id="sliceCard"></div>
+        <div class="rcard" id="savedCard"></div>
+        <div class="rcard" id="platesCard"></div>
+      </div>
+      <div class="rcard layercard" id="layerCard" hidden>
+        <div class="layer-head">
+          <h3 class="rtitle"><svg class="ico" aria-hidden="true"><use href="#i-layers"/></svg>Layer preview</h3>
+          <div class="tabs" role="tablist" aria-label="Layer preview mode">
+            <button type="button" role="tab" id="lvTab2d" aria-selected="true" aria-controls="layerView" data-lv="2d">Layer</button>
+            <button type="button" role="tab" id="lvTab3d" aria-selected="false" aria-controls="layerView" data-lv="3d">3D</button>
+          </div>
+          <span class="spacer"></span>
+          <label class="sr-only" for="layerPlate">Plate</label>
+          <select class="input small" id="layerPlate" hidden></select>
+          <span class="badge mono" id="layerInfo"></span>
+        </div>
+        <div class="layer">
+          <div class="layerview" id="layerView">
+            <canvas id="layerCanvas" role="img" aria-label="Toolpaths of the selected layer, seen from above"></canvas>
+            <canvas id="toolCanvas" role="img" aria-label="3D view of the toolpaths up to the selected layer" hidden></canvas>
+            <p class="stage-msg" id="toolMsg" hidden></p>
+          </div>
+          <input type="range" id="layerSlider" class="vslider" min="0" max="0" value="0" aria-label="Layer">
+        </div>
+        <div class="legend" id="legend"></div>
+        <p class="hint" id="layerHint">Arrow keys move one layer, Page Up / Page Down jump further. Click a legend entry to hide that path type. Drawn from the G-code.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="actionbar">
+  <div class="summary mono" id="summary">Add STL files to start</div>
+  <button type="button" class="btn ghost" id="btnReset">Reset</button>
+  <button type="button" class="btn" id="btnSlice" hidden>Convert &amp; slice <kbd class="kbd">⌘⇧⏎</kbd></button>
+  <button type="button" class="btn primary" id="btnConvert"><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>Convert to 3MF <kbd class="kbd">⌘⏎</kbd></button>
+</footer>
+
+<dialog id="dlgConflict" aria-labelledby="conflictTitle">
+  <form method="dialog">
+    <h2 id="conflictTitle">This file name is taken</h2>
+    <div class="notice warn"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div id="conflictText"></div></div>
+    <div class="dlg-actions">
+      <button class="btn ghost" value="skip">Skip</button>
+      <button class="btn" value="keep_both">Keep both</button>
+      <button class="btn" value="use_saved">Use the saved one</button>
+      <button class="btn primary" value="replace">Replace</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgShortcuts" aria-labelledby="shortcutsTitle">
+  <form method="dialog">
+    <h2 id="shortcutsTitle">Keyboard shortcuts</h2>
+    <dl class="keys">
+      <dt><kbd class="kbd">Ctrl/⌘ O</kbd></dt><dd>Add STL files</dd>
+      <dt><kbd class="kbd">Ctrl/⌘ Enter</kbd></dt><dd>Convert to 3MF</dd>
+      <dt><kbd class="kbd">Ctrl/⌘ Shift Enter</kbd></dt><dd>Convert &amp; slice</dd>
+      <dt><kbd class="kbd">Ctrl/⌘ S</kbd></dt><dd>Download the result (G-code if sliced, else 3MF)</dd>
+      <dt><kbd class="kbd">Delete</kbd></dt><dd>Remove the selected file (undo for 5 s)</dd>
+      <dt><kbd class="kbd">←/→ ↑/↓</kbd></dt><dd>Move through layers in the layer preview</dd>
+      <dt><kbd class="kbd">?</kbd></dt><dd>This list</dd>
+      <dt><kbd class="kbd">Esc</kbd></dt><dd>Close a dialog</dd>
+    </dl>
+    <div class="dlg-actions"><button class="btn primary" value="close">Close</button></div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="sr-only" id="sr" aria-live="assertive"></div>
+<div class="dropveil" id="dropVeil" hidden><div><svg class="ico" aria-hidden="true"><use href="#i-upload"/></svg>Drop to add to the project</div></div>
+</body>
+</html>
